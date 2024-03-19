@@ -7,16 +7,17 @@ type Transaction =
     | Purchase of symbol: string * shares: float * price: float * date: DateOnly
     | Sell of symbol: string * shares: float * price: float * date: DateOnly
     | Dividend of symbol: string * amount: float * date: DateOnly
+    | Interest of amount: float * date: DateOnly
 
 let readTransactions (rows: seq<CsvRow>) =
     let (|IsPurchase|_|) (row: CsvRow) =
         if Regex.IsMatch(row?Action, @"^\s*YOU BOUGHT") then
             Some(
                 Purchase(
-                    symbol = (row?Symbol).Trim(),
-                    shares = (row?Quantity).AsFloat(),
-                    price = (row.["Price ($)"]).AsFloat(),
-                    date = DateOnly.Parse(row.["Run Date"])
+                    symbol = row?Symbol.Trim(),
+                    shares = row?Quantity.AsFloat(),
+                    price = row?Price.AsFloat(),
+                    date = (row.["Run Date"] |> DateOnly.Parse)
                 )
             )
         else
@@ -26,9 +27,9 @@ let readTransactions (rows: seq<CsvRow>) =
         if Regex.IsMatch(row?Action, @"^\s*YOU SOLD") then
             Some(
                 Sell(
-                    symbol = (row?Symbol).Trim(),
-                    shares = ((row?Quantity).AsFloat() |> Math.Abs),
-                    price = (row.["Price ($)"]).AsFloat(),
+                    symbol = row?Symbol.Trim(),
+                    shares = (row?Quantity.AsFloat() |> Math.Abs),
+                    price = row?Price.AsFloat(),
                     date = (row.["Run Date"] |> DateOnly.Parse)
                 )
             )
@@ -39,11 +40,17 @@ let readTransactions (rows: seq<CsvRow>) =
         if Regex.IsMatch(row?Action, @"^\s*DIVIDEND RECEIVED") then
             Some(
                 Dividend(
-                    symbol = (row?Symbol).Trim(),
-                    amount = row.["Amount ($)"].AsFloat(),
+                    symbol = row?Symbol.Trim(),
+                    amount = row?Amount.AsFloat(),
                     date = (row.["Run Date"] |> DateOnly.Parse)
                 )
             )
+        else
+            None
+
+    let (|IsInterest|_|) (row: CsvRow) =
+        if Regex.IsMatch(row?Action, @"^\s*INTEREST EARNED") then
+            Some(Interest(amount = row?Amount.AsFloat(), date = (row.["Run Date"] |> DateOnly.Parse)))
         else
             None
 
@@ -52,6 +59,7 @@ let readTransactions (rows: seq<CsvRow>) =
         | IsPurchase t -> Some t
         | IsSell t -> Some t
         | IsDividend t -> Some t
+        | IsInterest t -> Some t
         | _ -> None)
         rows
 
@@ -68,9 +76,10 @@ let main args =
         readTransactions csvRows
         |> Seq.toList
         |> List.sortBy (function
-            | Purchase(_, _, _, date) -> date
-            | Sell(_, _, _, date) -> date
-            | Dividend(_, _, date) -> date)
+            | Purchase(_, _, _, d) -> d
+            | Sell(_, _, _, d) -> d
+            | Dividend(_, _, d) -> d
+            | Interest(_, d) -> d)
 
     for tx in orderedTransactions do
         printfn "%s" (tx.ToString())

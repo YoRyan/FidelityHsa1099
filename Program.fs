@@ -9,6 +9,13 @@ type Transaction =
     | Dividend of symbol: string * amount: float * date: DateOnly
     | Interest of amount: float * date: DateOnly
 
+type Lot =
+    { Shares: float
+      Price: float
+      Purchased: DateOnly }
+
+type Gain = { Amount: float; Realized: DateOnly }
+
 let readTransactions (rows: seq<CsvRow>) =
     let (|IsPurchase|_|) (row: CsvRow) =
         if Regex.IsMatch(row?Action, @"^\s*YOU BOUGHT") then
@@ -70,6 +77,57 @@ let getDate =
     | Dividend(_, _, d) -> d
     | Interest(_, d) -> d
 
+let capitalGainsFor (transactions: seq<Transaction>) (year: int) =
+    let folder ((lots, gains): Map<string, list<Lot>> * list<Gain>) =
+        function
+        | Purchase(symbol, shares, price, date) ->
+            let ourLots =
+                match Map.tryFind symbol lots with
+                | Some l -> l
+                | None -> []
+
+            (Map.add
+                symbol
+                (ourLots
+                 @ [ { Shares = shares
+                       Price = price
+                       Purchased = date } ])
+                lots,
+             gains)
+        | Sell(symbol, shares, price, date) ->
+            let ourLots =
+                match Map.tryFind symbol lots with
+                | Some l -> l
+                | None -> []
+
+            // Sell lots in FIFO order.
+            let lotFolder ((sharesLeft, gain, newLots): float * float * list<Lot>) (lot: Lot) =
+                if lot.Shares > sharesLeft then
+                    (0.,
+                     gain + sharesLeft * (price - lot.Price),
+                     newLots
+                     @ [ { Shares = lot.Shares - sharesLeft
+                           Price = lot.Price
+                           Purchased = lot.Purchased } ])
+                else
+                    (sharesLeft - lot.Shares, gain + lot.Shares * (price - lot.Price), newLots)
+
+            let sharesLeft, gain, newLots = Seq.fold lotFolder (shares, 0., []) ourLots
+
+            if sharesLeft > 0.0001 then
+                eprintfn "Failed to find basis for %f shares of %s sold on %s." sharesLeft symbol (date.ToString())
+
+            (Map.add symbol newLots lots, gains @ [ { Amount = gain; Realized = date } ])
+        | _ -> (lots, gains)
+
+    transactions
+    |> Seq.fold folder (Map.empty<string, list<Lot>>, [])
+    |> (fun (_, gains) -> gains)
+    |> Seq.filter (fun gain ->
+        let date = gain.Realized
+        date >= DateOnly(year, 1, 1) && date <= DateOnly(year, 12, 31))
+    |> Seq.sumBy (fun gain -> gain.Amount)
+
 let filterFor (transactions: seq<Transaction>) (year: int) =
     Seq.filter
         (fun tx ->
@@ -113,9 +171,12 @@ let main args =
     let orderedTransactions =
         readTransactions csvRows |> Seq.toList |> List.sortBy getDate
 
+    let gains = capitalGainsFor orderedTransactions year
+    printfn "Gains Realized:\t\t%s" (cashf gains)
+
     let dividends = dividendsFor orderedTransactions year
-    printfn "Dividends Received:"
-    Map.iter (fun symbol amount -> printfn "%s:\t%s" symbol (cashf amount)) dividends
+    printfn "\nDividends Received:"
+    Map.iter (fun symbol amount -> printfn "%s:\t\t\t%s" symbol (cashf amount)) dividends
 
     let interest = interestFor orderedTransactions year
     printfn "\nInterest Earned:\t%s" (cashf interest)

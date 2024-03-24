@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FidelityHsa1099", "FidelityHsa1099.fsproj", "{C13BF3D2-4BB9-4A16-AFE6-9DC9A7CBF406}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FidelityHsa1099.Tests", "FidelityHsa1099.Tests\FidelityHsa1099.Tests.fsproj", "{EF244C90-3C77-4CD0-A6D8-DFB850B1F832}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FidelityHsa1099", "FidelityHsa1099\FidelityHsa1099.fsproj", "{ADDE74A0-2112-4624-AB72-4ED9B616127D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -14,9 +16,13 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C13BF3D2-4BB9-4A16-AFE6-9DC9A7CBF406}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C13BF3D2-4BB9-4A16-AFE6-9DC9A7CBF406}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C13BF3D2-4BB9-4A16-AFE6-9DC9A7CBF406}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C13BF3D2-4BB9-4A16-AFE6-9DC9A7CBF406}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF244C90-3C77-4CD0-A6D8-DFB850B1F832}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF244C90-3C77-4CD0-A6D8-DFB850B1F832}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF244C90-3C77-4CD0-A6D8-DFB850B1F832}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF244C90-3C77-4CD0-A6D8-DFB850B1F832}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADDE74A0-2112-4624-AB72-4ED9B616127D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADDE74A0-2112-4624-AB72-4ED9B616127D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADDE74A0-2112-4624-AB72-4ED9B616127D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADDE74A0-2112-4624-AB72-4ED9B616127D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

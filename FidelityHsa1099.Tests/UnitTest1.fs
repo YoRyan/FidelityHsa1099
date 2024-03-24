@@ -234,3 +234,24 @@ let CapitalGainsFifoLots () =
                  Date = DateOnly(2024, 4, 20) |} ]
 
     Assert.AreEqual(capitalGainsFor transactions 2024, 500 + 0)
+
+[<Test>]
+let CapitalGainsIgnoresOtherYears () =
+    let transactions =
+        [ Purchase
+              {| Symbol = "SPY"
+                 Shares = 100
+                 Price = 10
+                 Date = DateOnly(2024, 1, 1) |}
+          Sell
+              {| Symbol = "SPY"
+                 Shares = 50
+                 Price = 20
+                 Date = DateOnly(2024, 12, 1) |}
+          Sell
+              {| Symbol = "SPY"
+                 Shares = 50
+                 Price = 30
+                 Date = DateOnly(2025, 1, 1) |} ]
+
+    Assert.AreEqual(capitalGainsFor transactions 2024, 500)

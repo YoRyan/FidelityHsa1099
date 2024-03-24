@@ -4,10 +4,21 @@ open System
 open System.Text.RegularExpressions
 
 type Transaction =
-    | Purchase of symbol: string * shares: float * price: float * date: DateOnly
-    | Sell of symbol: string * shares: float * price: float * date: DateOnly
-    | Dividend of symbol: string * amount: float * date: DateOnly
-    | Interest of amount: float * date: DateOnly
+    | Purchase of
+        {| Symbol: string
+           Shares: float
+           Price: float
+           Date: DateOnly |}
+    | Sell of
+        {| Symbol: string
+           Shares: float
+           Price: float
+           Date: DateOnly |}
+    | Dividend of
+        {| Symbol: string
+           Amount: float
+           Date: DateOnly |}
+    | Interest of {| Amount: float; Date: DateOnly |}
 
 type Lot =
     { Shares: float
@@ -20,12 +31,11 @@ let readTransactions (rows: seq<CsvRow>) =
     let (|IsPurchase|_|) (row: CsvRow) =
         if Regex.IsMatch(row?Action, @"^\s*YOU BOUGHT") then
             Some(
-                Purchase(
-                    symbol = row?Symbol.Trim(),
-                    shares = row?Quantity.AsFloat(),
-                    price = row?Price.AsFloat(),
-                    date = (row.["Run Date"] |> DateOnly.Parse)
-                )
+                Purchase
+                    {| Symbol = row?Symbol.Trim()
+                       Shares = row?Quantity.AsFloat()
+                       Price = row?Price.AsFloat()
+                       Date = row.["Run Date"] |> DateOnly.Parse |}
             )
         else
             None
@@ -33,12 +43,11 @@ let readTransactions (rows: seq<CsvRow>) =
     let (|IsSell|_|) (row: CsvRow) =
         if Regex.IsMatch(row?Action, @"^\s*YOU SOLD") then
             Some(
-                Sell(
-                    symbol = row?Symbol.Trim(),
-                    shares = (row?Quantity.AsFloat() |> Math.Abs),
-                    price = row?Price.AsFloat(),
-                    date = (row.["Run Date"] |> DateOnly.Parse)
-                )
+                Sell
+                    {| Symbol = row?Symbol.Trim()
+                       Shares = row?Quantity.AsFloat() |> Math.Abs
+                       Price = row?Price.AsFloat()
+                       Date = row.["Run Date"] |> DateOnly.Parse |}
             )
         else
             None
@@ -46,18 +55,21 @@ let readTransactions (rows: seq<CsvRow>) =
     let (|IsDividend|_|) (row: CsvRow) =
         if Regex.IsMatch(row?Action, @"^\s*DIVIDEND RECEIVED") then
             Some(
-                Dividend(
-                    symbol = row?Symbol.Trim(),
-                    amount = row?Amount.AsFloat(),
-                    date = (row.["Run Date"] |> DateOnly.Parse)
-                )
+                Dividend
+                    {| Symbol = row?Symbol.Trim()
+                       Amount = row?Amount.AsFloat()
+                       Date = row.["Run Date"] |> DateOnly.Parse |}
             )
         else
             None
 
     let (|IsInterest|_|) (row: CsvRow) =
         if Regex.IsMatch(row?Action, @"^\s*INTEREST EARNED") then
-            Some(Interest(amount = row?Amount.AsFloat(), date = (row.["Run Date"] |> DateOnly.Parse)))
+            Some(
+                Interest
+                    {| Amount = row?Amount.AsFloat()
+                       Date = row.["Run Date"] |> DateOnly.Parse |}
+            )
         else
             None
 
@@ -72,31 +84,31 @@ let readTransactions (rows: seq<CsvRow>) =
 
 let getDate =
     function
-    | Purchase(_, _, _, d) -> d
-    | Sell(_, _, _, d) -> d
-    | Dividend(_, _, d) -> d
-    | Interest(_, d) -> d
+    | Purchase p -> p.Date
+    | Sell s -> s.Date
+    | Dividend d -> d.Date
+    | Interest i -> i.Date
 
 let capitalGainsFor (transactions: seq<Transaction>) (year: int) =
     let folder ((lots, gains): Map<string, list<Lot>> * list<Gain>) =
         function
-        | Purchase(symbol, shares, price, date) ->
+        | Purchase p ->
             let ourLots =
-                match Map.tryFind symbol lots with
+                match Map.tryFind p.Symbol lots with
                 | Some l -> l
                 | None -> []
 
             (Map.add
-                symbol
+                p.Symbol
                 (ourLots
-                 @ [ { Shares = shares
-                       Price = price
-                       Purchased = date } ])
+                 @ [ { Shares = p.Shares
+                       Price = p.Price
+                       Purchased = p.Date } ])
                 lots,
              gains)
-        | Sell(symbol, shares, price, date) ->
+        | Sell s ->
             let ourLots =
-                match Map.tryFind symbol lots with
+                match Map.tryFind s.Symbol lots with
                 | Some l -> l
                 | None -> []
 
@@ -104,20 +116,20 @@ let capitalGainsFor (transactions: seq<Transaction>) (year: int) =
             let lotFolder ((sharesLeft, gain, newLots): float * float * list<Lot>) (lot: Lot) =
                 if lot.Shares > sharesLeft then
                     (0.,
-                     gain + sharesLeft * (price - lot.Price),
+                     gain + sharesLeft * (s.Price - lot.Price),
                      newLots
                      @ [ { Shares = lot.Shares - sharesLeft
                            Price = lot.Price
                            Purchased = lot.Purchased } ])
                 else
-                    (sharesLeft - lot.Shares, gain + lot.Shares * (price - lot.Price), newLots)
+                    (sharesLeft - lot.Shares, gain + lot.Shares * (s.Price - lot.Price), newLots)
 
-            let sharesLeft, gain, newLots = Seq.fold lotFolder (shares, 0., []) ourLots
+            let sharesLeft, gain, newLots = Seq.fold lotFolder (s.Shares, 0., []) ourLots
 
             if sharesLeft > 0.0001 then
-                eprintfn "Failed to find basis for %f shares of %s sold on %s." sharesLeft symbol (date.ToString())
+                eprintfn "Failed to find basis for %f shares of %s sold on %s." sharesLeft s.Symbol (s.Date.ToString())
 
-            (Map.add symbol newLots lots, gains @ [ { Amount = gain; Realized = date } ])
+            (Map.add s.Symbol newLots lots, gains @ [ { Amount = gain; Realized = s.Date } ])
         | _ -> (lots, gains)
 
     transactions
@@ -138,7 +150,7 @@ let filterFor (transactions: seq<Transaction>) (year: int) =
 let interestFor (transactions: seq<Transaction>) (year: int) =
     filterFor transactions year
     |> Seq.choose (function
-        | Interest(amount, _) -> Some amount
+        | Interest i -> Some i.Amount
         | _ -> None)
     |> Seq.sum
 
@@ -153,7 +165,7 @@ let dividendsFor (transactions: seq<Transaction>) (year: int) =
 
     filterFor transactions year
     |> Seq.choose (function
-        | Dividend(symbol, amount, _) -> Some(symbol, amount)
+        | Dividend d -> Some(d.Symbol, d.Amount)
         | _ -> None)
     |> Seq.fold folder Map.empty<string, float>
 

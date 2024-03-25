@@ -20,7 +20,7 @@ let InterestSum () =
               {| Amount = 50
                  Date = DateOnly(2024, 4, 20) |} ]
 
-    Assert.AreEqual(interestFor transactions 2024, 300)
+    Assert.AreEqual(300, interestFor transactions 2024)
 
 [<Test>]
 let InterestIgnoresOtherTransactions () =
@@ -36,7 +36,7 @@ let InterestIgnoresOtherTransactions () =
               {| Amount = 50
                  Date = DateOnly(2024, 4, 20) |} ]
 
-    Assert.AreEqual(interestFor transactions 2024, 150)
+    Assert.AreEqual(150, interestFor transactions 2024)
 
 [<Test>]
 let InterestIgnoresOtherYears () =
@@ -54,7 +54,7 @@ let InterestIgnoresOtherYears () =
               {| Amount = 35
                  Date = DateOnly(2025, 1, 15) |} ]
 
-    Assert.AreEqual(interestFor transactions 2024, 150)
+    Assert.AreEqual(150, interestFor transactions 2024)
 
 [<Test>]
 let DividendsSumOneSymbol () =
@@ -72,7 +72,7 @@ let DividendsSumOneSymbol () =
                  Amount = 50
                  Date = DateOnly(2024, 4, 20) |} ]
 
-    Assert.AreEqual(dividendsFor transactions 2024, Map<string, float> [ ("SPY", 300) ])
+    Assert.AreEqual(Map<string, float> [ ("SPY", 300) ], dividendsFor transactions 2024)
 
 [<Test>]
 let DividendsSumMultipleSymbols () =
@@ -94,7 +94,7 @@ let DividendsSumMultipleSymbols () =
                  Amount = 30
                  Date = DateOnly(2024, 1, 6) |} ]
 
-    Assert.AreEqual(dividendsFor transactions 2024, Map<string, float> [ ("SPY", 250); ("VOO", 80) ])
+    Assert.AreEqual(Map<string, float> [ ("SPY", 250); ("VOO", 80) ], dividendsFor transactions 2024)
 
 [<Test>]
 let DividendsIgnoresOtherTransactions () =
@@ -111,7 +111,7 @@ let DividendsIgnoresOtherTransactions () =
                  Amount = 50
                  Date = DateOnly(2024, 4, 20) |} ]
 
-    Assert.AreEqual(dividendsFor transactions 2024, Map<string, float> [ ("SPY", 150) ])
+    Assert.AreEqual(Map<string, float> [ ("SPY", 150) ], dividendsFor transactions 2024)
 
 [<Test>]
 let DividendsIgnoresOtherYears () =
@@ -133,7 +133,7 @@ let DividendsIgnoresOtherYears () =
                  Amount = 35
                  Date = DateOnly(2025, 1, 15) |} ]
 
-    Assert.AreEqual(dividendsFor transactions 2024, Map<string, float> [ ("SPY", 300) ])
+    Assert.AreEqual(Map<string, float> [ ("SPY", 300) ], dividendsFor transactions 2024)
 
 [<Test>]
 let CapitalGainsBasicSell () =
@@ -149,7 +149,7 @@ let CapitalGainsBasicSell () =
                  Price = 110
                  Date = DateOnly(2024, 4, 20) |} ]
 
-    Assert.AreEqual(capitalGainsFor transactions 2024, 240)
+    Assert.AreEqual(240, capitalGainsFor transactions 2024)
 
 [<Test>]
 let CapitalGainsBasicPartialSale () =
@@ -165,7 +165,7 @@ let CapitalGainsBasicPartialSale () =
                  Price = 110
                  Date = DateOnly(2024, 4, 20) |} ]
 
-    Assert.AreEqual(capitalGainsFor transactions 2024, 120)
+    Assert.AreEqual(120, capitalGainsFor transactions 2024)
 
 [<Test>]
 let CapitalGainsMultipleSell () =
@@ -191,7 +191,7 @@ let CapitalGainsMultipleSell () =
                  Price = 15
                  Date = DateOnly(2024, 6, 10) |} ]
 
-    Assert.AreEqual(capitalGainsFor transactions 2024, 1000)
+    Assert.AreEqual(1000, capitalGainsFor transactions 2024)
 
 [<Test>]
 let CapitalGainsMultipleLots () =
@@ -212,7 +212,7 @@ let CapitalGainsMultipleLots () =
                  Price = 20
                  Date = DateOnly(2024, 4, 20) |} ]
 
-    Assert.AreEqual(capitalGainsFor transactions 2024, 1500 + 1000)
+    Assert.AreEqual(1500 + 1000, capitalGainsFor transactions 2024)
 
 [<Test>]
 let CapitalGainsFifoLots () =
@@ -233,7 +233,7 @@ let CapitalGainsFifoLots () =
                  Price = 10
                  Date = DateOnly(2024, 4, 20) |} ]
 
-    Assert.AreEqual(capitalGainsFor transactions 2024, 500 + 0)
+    Assert.AreEqual(500 + 0, capitalGainsFor transactions 2024)
 
 [<Test>]
 let CapitalGainsIgnoresOtherYears () =
@@ -254,4 +254,4 @@ let CapitalGainsIgnoresOtherYears () =
                  Price = 30
                  Date = DateOnly(2025, 1, 1) |} ]
 
-    Assert.AreEqual(capitalGainsFor transactions 2024, 500)
+    Assert.AreEqual(500, capitalGainsFor transactions 2024)

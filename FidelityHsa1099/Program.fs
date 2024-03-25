@@ -25,7 +25,10 @@ type Lot =
       Price: float
       Purchased: DateOnly }
 
-type Gain = { Amount: float; Realized: DateOnly }
+type Gain =
+    { Shares: float
+      Amount: float
+      Realized: DateOnly }
 
 let readTransactions (rows: seq<CsvRow>) =
     let (|IsPurchase|_|) (row: CsvRow) =
@@ -89,28 +92,50 @@ let getDate =
     | Dividend d -> d.Date
     | Interest i -> i.Date
 
+let datesWithin (days: int) (a: DateOnly) (b: DateOnly) =
+    Math.Abs(a.DayNumber - b.DayNumber) <= days
+
 let capitalGainsFor (transactions: seq<Transaction>) (year: int) =
-    let folder ((lots, gains): Map<string, list<Lot>> * list<Gain>) =
+    let folder (state: Map<string, list<Lot> * list<Gain>>) =
         function
         | Purchase p ->
-            let ourLots =
-                match Map.tryFind p.Symbol lots with
-                | Some l -> l
-                | None -> []
+            let (ourLots, ourGains) =
+                match Map.tryFind p.Symbol state with
+                | Some(s, g) -> s, g
+                | None -> [], []
 
-            (Map.add
+            // Look back through realized losses for wash sales in FIFO order.
+            let gainFolder ((sharesLeft, disallowed, newGains): float * float * list<Gain>) (gain: Gain) =
+                if gain.Amount < 0 && datesWithin 30 gain.Realized p.Date then
+                    if gain.Shares <= sharesLeft then
+                        (sharesLeft - gain.Shares, disallowed + gain.Amount, newGains)
+                    else
+                        let washPct = sharesLeft / gain.Shares
+
+                        (0.,
+                         disallowed + -gain.Amount * washPct,
+                         newGains
+                         @ [ { Shares = gain.Shares - sharesLeft
+                               Amount = gain.Amount * (1. - washPct)
+                               Realized = gain.Realized } ])
+                else
+                    (sharesLeft, disallowed, newGains @ [ gain ])
+
+            let _, disallowed, newGains = Seq.fold gainFolder (p.Shares, 0., []) ourGains
+
+            Map.add
                 p.Symbol
-                (ourLots
-                 @ [ { Shares = p.Shares
-                       Price = p.Price
-                       Purchased = p.Date } ])
-                lots,
-             gains)
+                ((ourLots
+                  @ [ { Shares = p.Shares
+                        Price = p.Price + disallowed / p.Shares
+                        Purchased = p.Date } ]),
+                 newGains)
+                state
         | Sell s ->
-            let ourLots =
-                match Map.tryFind s.Symbol lots with
-                | Some l -> l
-                | None -> []
+            let (ourLots, ourGains) =
+                match Map.tryFind s.Symbol state with
+                | Some(s, g) -> s, g
+                | None -> [], []
 
             // Sell lots in FIFO order.
             let lotFolder ((sharesLeft, gain, newLots): float * float * list<Lot>) (lot: Lot) =
@@ -129,12 +154,21 @@ let capitalGainsFor (transactions: seq<Transaction>) (year: int) =
             if sharesLeft > 0.0001 then
                 eprintfn "Failed to find basis for %f shares of %s sold on %s." sharesLeft s.Symbol (s.Date.ToString())
 
-            (Map.add s.Symbol newLots lots, gains @ [ { Amount = gain; Realized = s.Date } ])
-        | _ -> (lots, gains)
+            Map.add
+                s.Symbol
+                (newLots,
+                 ourGains
+                 @ [ { Shares = s.Shares
+                       Amount = gain
+                       Realized = s.Date } ])
+                state
+        | _ -> state
 
     transactions
-    |> Seq.fold folder (Map.empty<string, list<Lot>>, [])
-    |> (fun (_, gains) -> gains)
+    |> Seq.fold folder (Map.empty<string, list<Lot> * list<Gain>>)
+    |> (fun state -> state.Values)
+    |> Seq.map (fun (_lots, gains) -> gains)
+    |> Seq.concat
     |> Seq.filter (fun gain ->
         let date = gain.Realized
         date >= DateOnly(year, 1, 1) && date <= DateOnly(year, 12, 31))

@@ -255,3 +255,76 @@ let CapitalGainsIgnoresOtherYears () =
                  Date = DateOnly(2025, 1, 1) |} ]
 
     Assert.AreEqual(500, capitalGainsFor transactions 2024)
+
+[<Test>]
+let WashSaleBasic () =
+    let transactions =
+        [ Purchase
+              {| Symbol = "SPY"
+                 Shares = 100
+                 Price = 10
+                 Date = DateOnly(2024, 1, 1) |}
+          Sell
+              {| Symbol = "SPY"
+                 Shares = 100
+                 Price = 8
+                 Date = DateOnly(2024, 1, 15) |}
+          Purchase
+              {| Symbol = "SPY"
+                 Shares = 100
+                 Price = 12
+                 Date = DateOnly(2024, 1, 30) |} ]
+
+    Assert.AreEqual(0, capitalGainsFor transactions 2024)
+
+[<Test>]
+let WashSalePartial () =
+    let transactions =
+        [ Purchase
+              {| Symbol = "SPY"
+                 Shares = 100
+                 Price = 20
+                 Date = DateOnly(2024, 1, 1) |}
+          Sell
+              {| Symbol = "SPY"
+                 Shares = 50
+                 Price = 10
+                 Date = DateOnly(2024, 2, 1) |}
+          Sell
+              {| Symbol = "SPY"
+                 Shares = 50
+                 Price = 5
+                 Date = DateOnly(2024, 2, 7) |}
+          Purchase
+              {| Symbol = "SPY"
+                 Shares = 75
+                 Price = 12
+                 Date = DateOnly(2024, 2, 15) |} ]
+
+    Assert.AreEqual(25 * (5 - 20), capitalGainsFor transactions 2024)
+
+[<Test>]
+let WashSaleAddLossToBasis () =
+    let transactions =
+        [ Purchase
+              {| Symbol = "SPY"
+                 Shares = 100
+                 Price = 20
+                 Date = DateOnly(2024, 1, 1) |}
+          Sell
+              {| Symbol = "SPY"
+                 Shares = 100
+                 Price = 10
+                 Date = DateOnly(2024, 2, 1) |}
+          Purchase
+              {| Symbol = "SPY"
+                 Shares = 25
+                 Price = 10
+                 Date = DateOnly(2024, 2, 15) |}
+          Sell
+              {| Symbol = "SPY"
+                 Shares = 25
+                 Price = 20
+                 Date = DateOnly(2024, 3, 1) |} ]
+
+    Assert.AreEqual(-750, capitalGainsFor transactions 2024)

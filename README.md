@@ -7,6 +7,14 @@ To use it, supply your account activity exported as a csv file and the tax year 
 ```
 FidelityHsa1099 <path to csv> <year>
 ```
+```
+Gains Realized:		$ 61.75
+
+Dividends Received:
+VTI:			$ 49.71
+
+Interest Earned:	$ 0.68
+```
 
 ## Features
 
